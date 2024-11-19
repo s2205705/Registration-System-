@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: 'Arial', sans-serif;
-            background-color: #f0f8ff;
+            background-color: #006780;
             margin: 0;
             padding: 0;
             display: flex;
@@ -98,11 +98,11 @@
     <div class="container">
         <h1>Event Registration</h1>
         <div class="upload-section">
-            <label for="fileInput">Upload Attendee List (CSV with Name, Company, Email, Paid Status):</label>
+            <label for="fileInput">Upload Attendee List (CSV):</label>
             <input type="file" id="fileInput" accept=".csv">
         </div>
         <div class="search-section">
-            <label for="searchInput">Search Attendee by Name:</label>
+            <label for="searchInput">Search Attendee by Last Name:</label>
             <input type="text" id="searchInput" placeholder="Enter name or initials...">
         </div>
         <div class="buttons">
@@ -114,7 +114,8 @@
                     <th>Last Name</th>
                     <th>First Name</th>
                     <th>Company</th>
-                    <th>Email</th>
+                    <th></th>
+                    <th>Present</th>
                 </tr>
             </thead>
             <tbody>
@@ -135,9 +136,9 @@
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const rows = e.target.result.split('\n').map(row => row.trim());
-                    attendees = rows.slice(1).filter(row => row).map(row => {
+                    attendees = rows.slice(1).filter(row => row).map((row, index) => {
                         const [name, company, email, paidStatus] = row.split(',');
-                        return { name, company, email, paidStatus };
+                        return { id: index, name, company, email, paidStatus, present: false };
                     });
                     displayAttendees(attendees);
                 };
@@ -155,9 +156,22 @@
                     <td>${attendee.company}</td>
                     <td>${attendee.email}</td>
                     <td>${attendee.paidStatus}</td>
+                    <td><input type="checkbox" data-id="${attendee.id}" ${attendee.present ? 'checked' : ''}></td>
                 `;
                 tableBody.appendChild(row);
             });
+
+            document.querySelectorAll('#attendeesTable input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', handleCheckboxChange);
+            });
+        }
+
+        function handleCheckboxChange(event) {
+            const id = parseInt(event.target.getAttribute('data-id'));
+            const attendee = attendees.find(att => att.id === id);
+            if (attendee) {
+                attendee.present = event.target.checked;
+            }
         }
 
         function sortAttendees() {
@@ -168,7 +182,7 @@
         function searchAttendees() {
             const searchValue = document.getElementById('searchInput').value.toLowerCase();
             const filteredAttendees = attendees.filter(attendee =>
-                attendee.name.toLowerCase().startsWith(searchValue)
+                attendee.name.toLowerCase().includes(searchValue)
             );
             displayAttendees(filteredAttendees);
         }
