@@ -6,8 +6,8 @@
     <title>Event Registration</title>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
-            background-color: #006780;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f3f3;
             margin: 0;
             padding: 0;
             display: flex;
@@ -18,38 +18,47 @@
 
         .container {
             background-color: #ffffff;
-            border: 2px solid #003366;
-            border-radius: 10px;
-            padding: 20px;
+            border: 1px solid #e1e1e1;
+            border-radius: 8px;
+            padding: 20px 30px;
             width: 90%;
             max-width: 800px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
         h1 {
             text-align: center;
-            color: #003366;
+            color: #2b579a;
             margin-bottom: 20px;
+            font-size: 24px;
         }
 
-        .upload-section, .search-section {
+        .upload-section, .add-section, .search-section {
             margin-bottom: 20px;
             text-align: center;
         }
 
         label {
-            color: #003366;
-            font-weight: bold;
             display: block;
+            color: #333333;
+            font-weight: 600;
             margin-bottom: 10px;
+            font-size: 14px;
         }
 
         input[type="file"], input[type="text"] {
-            padding: 10px;
-            border: 1px solid #003366;
-            border-radius: 5px;
             width: 100%;
             max-width: 400px;
+            padding: 10px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-size: 14px;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        input[type="file"]:hover, input[type="text"]:focus {
+            border-color: #0078d4;
         }
 
         .buttons {
@@ -58,55 +67,90 @@
         }
 
         button {
-            background-color: #003366;
+            background-color: #0078d4;
             color: #ffffff;
             border: none;
             padding: 10px 20px;
-            font-size: 16px;
+            font-size: 14px;
             cursor: pointer;
-            border-radius: 5px;
+            border-radius: 4px;
             margin: 5px;
+            transition: background-color 0.2s, transform 0.1s;
         }
 
         button:hover {
-            background-color: #00509e;
+            background-color: #005a9e;
+        }
+
+        button:active {
+            transform: scale(0.98);
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            font-size: 14px;
         }
 
         thead {
-            background-color: #003366;
-            color: #ffffff;
+            background-color: #f3f3f3;
         }
 
-        th, td {
-            border: 1px solid #003366;
-            padding: 10px;
+        th {
+            color: #333333;
+            font-weight: 600;
             text-align: left;
+            padding: 10px;
+            border-bottom: 2px solid #e1e1e1;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #e1e1e1;
+        }
+
+        tbody tr:hover {
+            background-color: #f9f9f9;
         }
 
         tbody tr:nth-child(even) {
-            background-color: #f0f8ff;
+            background-color: #fcfcfc;
+        }
+
+        input[type="checkbox"] {
+            transform: scale(1.2);
+            cursor: pointer;
+        }
+
+        .count {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #333333;
+            font-size: 16px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Event Registration</h1>
+        <div class="count">
+            <span id="totalCount">Total Attendees: 0</span> | 
+            <span id="presentCount">Present: 0</span>
+        </div>
         <div class="upload-section">
             <label for="fileInput">Upload Attendee List (CSV):</label>
             <input type="file" id="fileInput" accept=".csv">
         </div>
         <div class="search-section">
             <label for="searchInput">Search Attendee by Last Name:</label>
-            <input type="text" id="searchInput" placeholder="Enter name or initials...">
+            <input type="text" id="searchInput" placeholder="Enter last name...">
         </div>
         <div class="buttons">
-            <button id="sortButton">Sort Alphabetically by Name</button>
+            <button id="sortButton">Sort Alphabetically by Last Name</button>
+        </div>
+        <div class="add-section">
+            <button id="addAttendeeButton">Add New Attendee</button>
         </div>
         <table id="attendeesTable">
             <thead>
@@ -114,7 +158,7 @@
                     <th>Last Name</th>
                     <th>First Name</th>
                     <th>Company</th>
-                    <th></th>
+                    <th>Email</th>
                     <th>Present</th>
                 </tr>
             </thead>
@@ -122,13 +166,18 @@
                 <!-- Attendees will be populated here -->
             </tbody>
         </table>
+        <div class="buttons">
+            <button id="downloadCSVButton">Download Updated CSV</button>
+        </div>
     </div>
     <script>
+        let attendees = [];
+
         document.getElementById('fileInput').addEventListener('change', handleFileUpload);
         document.getElementById('sortButton').addEventListener('click', sortAttendees);
         document.getElementById('searchInput').addEventListener('input', searchAttendees);
-
-        let attendees = [];
+        document.getElementById('addAttendeeButton').addEventListener('click', addAttendee);
+        document.getElementById('downloadCSVButton').addEventListener('click', downloadCSV);
 
         function handleFileUpload(event) {
             const file = event.target.files[0];
@@ -137,8 +186,8 @@
                 reader.onload = function(e) {
                     const rows = e.target.result.split('\n').map(row => row.trim());
                     attendees = rows.slice(1).filter(row => row).map((row, index) => {
-                        const [name, company, email, paidStatus] = row.split(',');
-                        return { id: index, name, company, email, paidStatus, present: false };
+                        const [last_name, first_name, company, email] = row.split(',').map(field => field.trim());
+                        return { id: index, last_name, first_name, company, email, present: false };
                     });
                     displayAttendees(attendees);
                 };
@@ -152,10 +201,10 @@
             data.forEach(attendee => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${attendee.name}</td>
+                    <td>${attendee.last_name}</td>
+                    <td>${attendee.first_name}</td>
                     <td>${attendee.company}</td>
                     <td>${attendee.email}</td>
-                    <td>${attendee.paidStatus}</td>
                     <td><input type="checkbox" data-id="${attendee.id}" ${attendee.present ? 'checked' : ''}></td>
                 `;
                 tableBody.appendChild(row);
@@ -164,6 +213,8 @@
             document.querySelectorAll('#attendeesTable input[type="checkbox"]').forEach(checkbox => {
                 checkbox.addEventListener('change', handleCheckboxChange);
             });
+
+            updateCounts();
         }
 
         function handleCheckboxChange(event) {
@@ -172,19 +223,57 @@
             if (attendee) {
                 attendee.present = event.target.checked;
             }
+            updateCounts();
+        }
+
+        function updateCounts() {
+            const totalCount = attendees.length;
+            const presentCount = attendees.filter(att => att.present).length;
+            document.getElementById('totalCount').textContent = `Total Attendees: ${totalCount}`;
+            document.getElementById('presentCount').textContent = `Present: ${presentCount}`;
         }
 
         function sortAttendees() {
-            attendees.sort((a, b) => a.name.localeCompare(b.name));
+            attendees.sort((a, b) => a.last_name.localeCompare(b.last_name));
             displayAttendees(attendees);
         }
 
         function searchAttendees() {
             const searchValue = document.getElementById('searchInput').value.toLowerCase();
             const filteredAttendees = attendees.filter(attendee =>
-                attendee.name.toLowerCase().includes(searchValue)
+                attendee.last_name.toLowerCase().includes(searchValue)
             );
             displayAttendees(filteredAttendees);
+        }
+
+        function addAttendee() {
+            const last_name = prompt('Enter Last Name:').trim();
+            const first_name = prompt('Enter First Name:').trim();
+            const company = prompt('Enter Company:').trim();
+            const email = prompt('Enter Email:').trim();
+
+            if (last_name && first_name && company && email) {
+                attendees.push({ id: attendees.length, last_name, first_name, company, email, present: false });
+                displayAttendees(attendees);
+            } else {
+                alert('All fields are required!');
+            }
+        }
+
+        function downloadCSV() {
+            let csvContent = 'Last Name,First Name,Company,Email,Present\n';
+            attendees.forEach(row => {
+                csvContent += `${row.last_name},${row.first_name},${row.company},${row.email},${row.present}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'attendees.csv';
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     </script>
 </body>
