@@ -247,10 +247,10 @@
         }
 
         function addAttendee() {
-            const last_name = prompt('Enter Last Name:').trim();
-            const first_name = prompt('Enter First Name:').trim();
-            const company = prompt('Enter Company:').trim();
-            const email = prompt('Enter Email:').trim();
+            const last_name = prompt('Enter Last Name:');
+            const first_name = prompt('Enter First Name:');
+            const company = prompt('Enter Company:');
+            const email = prompt('Enter Email:');
 
             if (last_name && first_name && company && email) {
                 attendees.push({ id: attendees.length, last_name, first_name, company, email, present: false });
